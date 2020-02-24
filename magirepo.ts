@@ -3,11 +3,11 @@ import { Context } from 'koishi-core'
 import * as watcher from './index'
 import axios, { AxiosResponse } from 'axios'
 
-let inside: number = 208339341
-let outside: number = 208339341
+let inside: number
+let outside: number
 let inver: number
 
-async function leak(ctx: Context, num: string) {
+async function leak(ctx: Context, name: string, num: string) {
     let int: number = parseInt(num)
     if (inver === null) inver = int
     else if (int !== inver) return
@@ -17,28 +17,31 @@ async function leak(ctx: Context, num: string) {
         res = await axios.head(url)
     } catch (e) {
         if (e.response) {
-            watcher.logger.debug(e.response)
-            watcher.logger.error("Internet error: %d", e.response.status)
-        } else watcher.logger.error(e)
+            watcher.memory[name].logger.debug(e.response)
+            watcher.memory[name].logger.error("Internet error: %d", e.response.status)
+        } else watcher.memory[name].logger.error(e)
         return
     }
     if (res.headers['content-type'] !== "image/png") {
-        watcher.logger.debug("not found")
+        watcher.memory[name].logger.debug("not found")
         return
     }
     inver = int + 1
-    watcher.logger.debug("Magirepo pre-release: %d", inver)
+    watcher.memory[name].logger.debug("Magirepo pre-release: %d", inver)
     ctx.sender.sendGroupMsgAsync(inside, url + "[CQ:image,file=" + url + "]")
 }
 
-function release(ctx: Context, num: string) {
+function release(ctx: Context, name: string, num: string) {
     const url = "https://magireco.com/images/comic2/image/" + num + ".jpg"
     ctx.sender.sendGroupMsgAsync(outside, url + "[CQ:image,file=" + url + "]")
 }
 
-export function apply (ctx: Context) {
+export function apply (ctx: Context, argv) {
+    inside = argv.inside
+    outside = argv.outside
     ctx.plugin(watcher.apply, {
-        intercal: [
+        name: "magirepo",
+        interval: [
             "0 45,47,50-59 15 * * 2",
             "0 0 * * * *",
         ],

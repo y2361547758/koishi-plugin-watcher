@@ -16,6 +16,7 @@
 
 | 参数 | 类型 | 举例 | 注释 |
 |:----:|:---:|:----:|:----:|
+| name | string | `test` | 监视名，用于区分命名空间 |
 | interval | any | `"0 0 * * * *"` | 以 schedule 配置多个周期，非空 |
 | url | string | `https://play.google.com/store/apps/details?id=com.aniplex.magireco` | 需要查询的url，非空 |
 | reg | RegExp | `/>(\d\.\d\.\d)</` | 用于匹配的正则表达式，非空 |
@@ -34,9 +35,10 @@ module.exports = {
   server: "ws://localhost:6700",
   plugins: [
     // 其他插件
-    "./koishi-plugin-watcher/magirepo.ts",  // 自定义更新、无更新行为，详见magirepo.ts
-    ["./koishi-plugin-watcher", {           // 基本使用，每个小时请求一次谷歌play检查版本号是否更新，然后推送到我的账号上
-      intercal: "0 0 * * * *",
+    ["./watcher/magirepo.ts", { inside: 208339341, outside: 208339341 }], // 自定义更新、无更新行为，详见magirepo.ts
+    ["./koishi-plugin-watcher", {          // 基本使用，每个小时请求一次谷歌play检查版本号是否更新，然后推送到我的账号上
+      name: "gplay",
+      interval: "0 0 * * * *",
       url: "https://play.google.com/store/apps/details?id=com.aniplex.magireco",
       reg: />(\d+\.\d+\.\d+)</,
       target: { private: [2361547758] }
