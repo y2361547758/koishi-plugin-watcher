@@ -42,8 +42,8 @@ export function apply (ctx: Context, argv) {
     ctx.plugin(watcher.apply, {
         name: "magirepo",
         interval: [
-            "0 45,47,50-59 15 * * 2",
             "0 0 * * * *",
+            { hour: 16, dayOfWeek: 2, minute: [45, 47, 49, 51, 53, 55, 56, 57, 58, 59], tz: 'Asia/Tokyo' }
         ],
         url: "https://magireco.com/comic2/",
         reg: /current = (\d+)/,
