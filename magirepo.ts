@@ -28,12 +28,12 @@ async function leak(ctx: Context, num: string) {
     }
     inver = int + 1
     watcher.logger.debug("Magirepo pre-release: %d", inver)
-    ctx.sender.sendGroupMsgAsync(inside, url + "[CQ:image,filr=" + url + "]")
+    ctx.sender.sendGroupMsgAsync(inside, url + "[CQ:image,file=" + url + "]")
 }
 
 function release(ctx: Context, num: string) {
     const url = "https://magireco.com/images/comic2/image/" + num + ".jpg"
-    ctx.sender.sendGroupMsgAsync(outside, url + "[CQ:image,filr=" + url + "]")
+    ctx.sender.sendGroupMsgAsync(outside, url + "[CQ:image,file=" + url + "]")
 }
 
 export function apply (ctx: Context) {
