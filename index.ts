@@ -3,8 +3,22 @@ import { Context, Logger, MessageType } from 'koishi-core'
 import axios from 'axios'
 import * as schedule from 'node-schedule'
 
+/**
+ * @param ctx koishi上下文
+ * @param name watcher名，用于区分命名空间
+ * @param url 请求的url
+ * @param reg 识别用的正则表达式
+ * @param after 监视内容有更新时调用的函数
+ * @param before 监视内容没有更新时调用的函数
+ */
 declare type updateFunc = (ctx: Context, name:string, url: string, reg: RegExp, after: callbackFunc, before?: callbackFunc) => void
-declare type callbackFunc = (ctx: Context, name: string, value: string) => void
+/**
+ * @param ctx koishi上下文
+ * @param name watcher名，用于区分命名空间
+ * @param value 捕捉到的值
+ * @param raw 请求返回的原始内容
+ */
+declare type callbackFunc = (ctx: Context, name: string, value: string, raw?: string) => void
 class config {
     name: string            // 名字，构建命名空间
     interval: any           // 以 schedule 配置多个周期
@@ -39,7 +53,7 @@ export function sendmsg(ctx: Context, name:string, msg: string): void {
     }
 }
 
-export function after(ctx: Context, name:string, value: string) {
+export function after(ctx: Context, name:string, value: string, raw?: string) {
     sendmsg(ctx, name, value)
 }
 
@@ -62,10 +76,10 @@ async function update(ctx: Context, name: string, url: string, reg: RegExp, afte
             memory[name].logger.debug("Old value: " + memory[name].value)
             memory[name].value = r[1]
             memory[name].logger.info("New value: " + memory[name].value)
-            after(ctx, name, memory[name].value)
+            after(ctx, name, memory[name].value, r[0])
         } else {
             memory[name].logger.debug("not update: " + memory[name].value)
-            if (before) before(ctx, name, memory[name].value)
+            if (before) before(ctx, name, memory[name].value, r[0])
         }
     } else {
         memory[name].logger.debug(res.data)

@@ -7,7 +7,7 @@ let inside: number
 let outside: number
 let inver: number
 
-async function leak(ctx: Context, name: string, num: string) {
+async function leak(ctx: Context, name: string, num: string, raw: string) {
     let int: number = parseInt(num)
     if (inver === null) inver = int
     else if (int !== inver) return
@@ -31,8 +31,13 @@ async function leak(ctx: Context, name: string, num: string) {
     ctx.sender.sendGroupMsgAsync(inside, url + "[CQ:image,file=" + url + "]")
 }
 
-function release(ctx: Context, name: string, num: string) {
+function release(ctx: Context, name: string, num: string, raw: string) {
     const url = "https://magireco.com/images/comic2/image/" + num + ".jpg"
+    let int: number = parseInt(num)
+    if (int !== inver) {
+        inver = int
+        leak(ctx, name, num, raw)
+    }
     ctx.sender.sendGroupMsgAsync(outside, url + "[CQ:image,file=" + url + "]")
 }
 
