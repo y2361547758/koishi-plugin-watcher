@@ -92,7 +92,7 @@ export function apply (ctx: Context, argv: config) {
     const job: schedule.JobCallback = (fireDate: Date) => {
         argv.update(ctx, argv.name, argv.url, argv.reg, argv.after, argv.before)
     }
-    if (Array.isArray(argv.interval) && typeof argv.interval[0] === "string") {
+    if (Array.isArray(argv.interval)) {
         for (const i of argv.interval) schedule.scheduleJob(i, job)
     // } else if (typeof argv.interval === "number") {
     //     "not support"

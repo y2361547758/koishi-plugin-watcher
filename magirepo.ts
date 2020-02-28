@@ -43,7 +43,8 @@ export function apply (ctx: Context, argv) {
         name: "magirepo",
         interval: [
             "0 0 * * * *",
-            { hour: 16, dayOfWeek: 2, minute: [45, 47, 49, 51, 53, 55, 56, 57, 58, 59], tz: 'Asia/Tokyo' }
+            { hour: 16, dayOfWeek: 2, minute: [15, 30, 45, 47, 49, 51, 53, 55, 56, 57, 58, 59], tz: 'Asia/Tokyo' },
+            { hour: 15, dayOfWeek: 2, minute: [5, 15, 30, 45], tz: 'Asia/Tokyo' }
         ],
         url: "https://magireco.com/comic2/",
         reg: /current = (\d+)/,
