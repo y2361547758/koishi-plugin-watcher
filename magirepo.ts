@@ -12,7 +12,7 @@ async function leak(ctx: Context, name: string, num: string, raw: string) {
     if (inver === null) inver = int
     else if (int !== inver) return
     let res: AxiosResponse<string>
-    const url = "https://android.magi-reco.com/magica/resource/image_web/page/collection/magirepo/img/part2/magirepo_02_" + (int + 1) + ".png"
+    const url = "https://rika.ren/magica/resource/image_web/page/collection/magirepo/img/part2/magirepo_02_" + (int + 1) + ".png?" + (new Date).getTime()
     try {
         res = await axios.head(url)
     } catch (e) {
