@@ -1,32 +1,24 @@
 export const name = 'watcher'
 import { Context, Logger, MessageType } from 'koishi-core'
-import axios from 'axios'
+import axios, { AxiosResponse } from 'axios'
 import * as schedule from 'node-schedule'
 
 /**
- * @param ctx koishi上下文
- * @param name watcher名，用于区分命名空间
- * @param url 请求的url
- * @param reg 识别用的正则表达式
- * @param after 监视内容有更新时调用的函数
- * @param before 监视内容没有更新时调用的函数
+ * @param init 是否是初始化
  */
-declare type updateFunc = (ctx: Context, name:string, url: string, reg: RegExp, after: callbackFunc, before?: callbackFunc) => void
+declare type updateFunc = (init?: boolean) => Promise<void>
 /**
- * @param ctx koishi上下文
- * @param name watcher名，用于区分命名空间
- * @param value 捕捉到的值
  * @param raw 请求返回的原始内容
  */
-declare type callbackFunc = (ctx: Context, name: string, value: string, raw?: string) => void
+declare type callbackFunc = (raw?: string) => Promise<void>
 class config {
     name: string            // 名字，构建命名空间
     interval: any           // 以 schedule 配置多个周期
     url: string             // 查询url
     reg: RegExp             // 匹配正则
-    update?: updateFunc     // 拉取更新的自定义函数
-    after?: callbackFunc    // 有更新时调用的函数
-    before?: callbackFunc   // 无更新时调用的函数
+    update?: updateFunc     // 拉取更新的自定义函数，必须异步
+    after?: callbackFunc    // 有更新时调用的函数，可选异步
+    before?: callbackFunc   // 无更新时调用的函数，可选异步
                             // 如果谁把这三个函数都重载了，建议直接另外写个独立插件
     target?: {              // 更新推送目标
         discuss: number[]
@@ -35,93 +27,85 @@ class config {
     }
 }
 
-export let memory: {
-    logger: Logger
-    value: string
+async function after(this: state, raw: string) {    // 有更新时调用的函数
+    this.logger.debug("msg: " + this.value)
+    for (const i in this.target) for (const j of this.target[i]) {
+        this.ctx.sender.sendMsgAsync(<MessageType>i, j, this.value)
+        this.logger.debug("send message to: %s_%d", i, j)
+    }
+}
+export class state {
+    logger: Logger | Console = console
+    value: string = null
     target: {
         discuss: number[],
         private: number[],
         group: number[]
     }
-}[] = []
-
-export function sendmsg(ctx: Context, name:string, msg: string): void {
-    memory[name].logger.debug("msg: " + msg)
-    for (const i in memory[name].target) for (const j of memory[name].target[i]) {
-        ctx.sender.sendMsgAsync(<MessageType>i, j, msg)
-        memory[name].logger.debug("send message to: %s_%d", i, j)
+    url: string             // 查询url
+    reg: RegExp             // 匹配正则
+    ctx: Context            // CQ上下文
+    after: callbackFunc = after
+    before: callbackFunc = null
+    constructor (ctx: Context, argv: config) {
+        this.url = argv.url
+        this.reg = argv.reg
+        this.ctx = ctx
+        this.logger = ctx.logger("watcher:" + argv.name)
+        this.target = argv.target ? {
+            discuss : argv.target.discuss || [],
+            private : argv.target.private || [],
+            group   : argv.target.group   || []
+        } : { discuss: [], private: [], group: [] }
+        if (argv.after) this.after = argv.after
+        if (argv.before) this.before = argv.before
+        if (argv.update) this.update = argv.update
     }
-}
-
-export function after(ctx: Context, name:string, value: string, raw?: string) {
-    sendmsg(ctx, name, value)
-}
-
-async function update(ctx: Context, name: string, url: string, reg: RegExp, after: callbackFunc, before?: callbackFunc) {
-    let res
-    memory[name].logger.debug("[" + new Date().toISOString() + "]" + "Job start")
-    try {
-        res = await axios.get<string>(url)
-    } catch (e) {
-        if (e.response) {
-            memory[name].logger.debug(e.response.data)
-            memory[name].logger.error("Internet error: %d", e.response.status)
-        } else memory[name].logger.error(e)
-        return
-    }
-    const r = reg.exec(res.data)
-    if (r) {
-        memory[name].logger.debug(r[0])
-        if (memory[name].value != r[1]) {
-            memory[name].logger.debug("Old value: " + memory[name].value)
-            memory[name].value = r[1]
-            memory[name].logger.info("New value: " + memory[name].value)
-            after(ctx, name, memory[name].value, r[0])
-        } else {
-            memory[name].logger.debug("not update: " + memory[name].value)
-            if (before) before(ctx, name, memory[name].value, r[0])
+    async update (init = false) { // 拉取更新的自定义函数
+        let res: AxiosResponse<string>
+        this.logger.debug("[" + new Date().toISOString() + "]" + "Job start")
+        try {
+            res = await axios.get<string>(this.url)
+        } catch (e) {
+            if (e.response) {
+                this.logger.debug(e.response.data)
+                this.logger.error("Internet error: %d", e.response.status)
+            } else this.logger.error(e)
+            return
         }
-    } else {
-        memory[name].logger.debug(res.data)
-        memory[name].logger.warn("Match nothing")
+        const r = this.reg.exec(res.data)
+        if (r) {
+            this.logger.debug(r[0])
+            if (this.value != r[1]) {
+                this.logger.debug("Old value: " + this.value)
+                this.value = r[1]
+                this.logger.info("New value: " + this.value)
+                if (!init) await this.after(r[0])
+            } else {
+                this.logger.debug("not update: " + this.value)
+                if (this.before) {
+                    await this.before(r[0])
+                }
+            }
+        } else {
+            this.logger.debug(res.data)
+            this.logger.warn("Match nothing")
+        }
+        this.logger.debug("[" + new Date().toISOString() + "]" + "Job end")
     }
-    memory[name].logger.debug("[" + new Date().toISOString() + "]" + "Job end")
+    job: schedule.JobCallback = (fireDate: Date) => { this.update() }
 }
 
 export function apply (ctx: Context, argv: config) {
     if (!argv.url || !argv.reg) return
     argv.interval = argv.interval || "0 * * * * *"
-    memory[argv.name] = {
-        logger: ctx.logger("watcher:" + argv.name),
-        value: null,
-        target: argv.target ? {
-            discuss : argv.target.discuss || [],
-            private : argv.target.private || [],
-            group   : argv.target.group   || []
-        } : { discuss: [], private: [], group: [] }
-    }
-    argv.after = argv.after || after
-    argv.update = argv.update || update
-
-    const job: schedule.JobCallback = (fireDate: Date) => {
-        argv.update(ctx, argv.name, argv.url, argv.reg, argv.after, argv.before)
-    }
+    let stat = new state(ctx, argv)
     if (Array.isArray(argv.interval)) {
-        for (const i of argv.interval) schedule.scheduleJob(i, job)
+        for (const i of argv.interval) schedule.scheduleJob(i, stat.job)
     // } else if (typeof argv.interval === "number") {
     //     "not support"
     } else {
-        schedule.scheduleJob(argv.interval, job)
+        schedule.scheduleJob(argv.interval, stat.job)
     }
-    // let lastUpdate: Date
-    // ctx.receiver.on('heartbeat', (meta) => {
-    //     logger.debug(meta)
-    //     const now = new Date()
-    //     if (now.getTime() - lastUpdate.getTime() >= argv.interval) {
-    //         lastUpdate = new Date()
-    //         job(new Date())
-    //     }
-    // })
-    // job(new Date())
-    argv.update(ctx, argv.name, argv.url, argv.reg, () => {})
+    stat.update(true)
 }

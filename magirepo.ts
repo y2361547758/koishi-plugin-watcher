@@ -7,38 +7,39 @@ let inside: number
 let outside: number
 let inver: number
 
-async function leak(ctx: Context, name: string, num: string, raw: string) {
-    let int: number = parseInt(num)
+async function leak(this: watcher.state, raw: string) {
+    let int: number = parseInt(this.value)
     if (inver === null) inver = int
     else if (int !== inver) return
     let res: AxiosResponse<string>
-    const url = "https://rika.ren/magica/resource/image_web/page/collection/magirepo/img/part2/magirepo_02_" + (int + 1) + ".png?" + (new Date).getTime()
+    const url = "https://jp.rika.ren/magica/resource/image_web/page/collection/magirepo/img/part2/magirepo_02_" + (int + 1) + ".png?" + (new Date).getTime()
     try {
         res = await axios.head(url)
     } catch (e) {
         if (e.response) {
-            watcher.memory[name].logger.debug(e.response)
-            watcher.memory[name].logger.error("Internet error: %d", e.response.status)
-        } else watcher.memory[name].logger.error(e)
+            this.logger.debug(e.response)
+            this.logger.error("Internet error: %d", e.response.status)
+        } else this.logger.error(e)
         return
     }
+    this.logger.debug(res)
     if (res.headers['content-type'] !== "image/png") {
-        watcher.memory[name].logger.debug("not found")
+        this.logger.debug("not found")
         return
     }
     inver = int + 1
-    watcher.memory[name].logger.debug("Magirepo pre-release: %d", inver)
-    ctx.sender.sendGroupMsgAsync(inside, url + "[CQ:image,file=" + url + "]")
+    this.logger.debug("Magirepo pre-release: %d", inver)
+    this.ctx.sender.sendGroupMsgAsync(inside, url + "[CQ:image,file=" + url + "]")
 }
 
-function release(ctx: Context, name: string, num: string, raw: string) {
-    const url = "https://magireco.com/images/comic2/image/" + num + ".jpg"
-    let int: number = parseInt(num)
+function release(this: watcher.state, raw: string) {
+    const url = "https://magireco.com/images/comic2/image/" + this.value + ".jpg"
+    let int: number = parseInt(this.value)
     if (int !== inver) {
         inver = int
-        leak(ctx, name, num, raw)
+        this.before(raw)
     }
-    ctx.sender.sendGroupMsgAsync(outside, url + "[CQ:image,file=" + url + "]")
+    this.ctx.sender.sendGroupMsgAsync(outside, url + "[CQ:image,file=" + url + "]")
 }
 
 export function apply (ctx: Context, argv) {
@@ -47,7 +48,7 @@ export function apply (ctx: Context, argv) {
     ctx.plugin(watcher.apply, {
         name: "magirepo",
         interval: [
-            "0 0 * * * *",
+            "*/15 * * * * *",
             { hour: 16, dayOfWeek: 2, minute: [15, 30, 45, 47, 49, 51, 53, 55, 56, 57, 58, 59], tz: 'Asia/Tokyo' },
             { hour: 15, dayOfWeek: 2, minute: [5, 15, 30, 45], tz: 'Asia/Tokyo' }
         ],

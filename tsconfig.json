@@ -4,6 +4,7 @@
     "declaration": true,
     "outDir": "dist",
     "removeComments": true,
+    "lib": ["ES2015"],
     // "strict": true,
     // "strictNullChecks": false,
     "noFallthroughCasesInSwitch": false
