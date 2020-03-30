@@ -27,13 +27,6 @@ class config {
     }
 }
 
-async function after(this: state, raw: string) {    // 有更新时调用的函数
-    this.logger.debug("msg: " + this.value)
-    for (const i in this.target) for (const j of this.target[i]) {
-        this.ctx.sender.sendMsgAsync(<MessageType>i, j, this.value)
-        this.logger.debug("send message to: %s_%d", i, j)
-    }
-}
 export class state {
     logger: Logger | Console = console
     value: string = null
@@ -45,8 +38,14 @@ export class state {
     url: string             // 查询url
     reg: RegExp             // 匹配正则
     ctx: Context            // CQ上下文
-    after: callbackFunc = after
-    before: callbackFunc = null
+    async after(raw: string) {    // 有更新时调用的函数
+        this.logger.debug("msg: " + this.value)
+        for (const i in this.target) for (const j of this.target[i]) {
+            this.ctx.sender.sendMsgAsync(<MessageType>i, j, this.value)
+            this.logger.debug("send message to: %s_%d", i, j)
+        }
+    }
+    async before(raw: string) {}
     constructor (ctx: Context, argv: config) {
         this.url = argv.url
         this.reg = argv.reg
@@ -83,9 +82,7 @@ export class state {
                 if (!init) await this.after(r[0])
             } else {
                 this.logger.debug("not update: " + this.value)
-                if (this.before) {
-                    await this.before(r[0])
-                }
+                await this.before(r[0])
             }
         } else {
             this.logger.debug(res.data)
