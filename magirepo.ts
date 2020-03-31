@@ -7,7 +7,7 @@ import * as schedule from 'node-schedule'
 class magirepo extends watcher.state {
     inside: number
     outside: number
-    inver: number
+    inver: number = null
     async after(raw: string) {
         const url = "https://magireco.com/images/comic2/image/" + this.value + ".jpg"
         let int: number = parseInt(this.value)
@@ -48,6 +48,8 @@ class magirepo extends watcher.state {
             name: "magirepo",
             interval: undefined
         })
+        this.inside = inside
+        this.outside = outside
     }
 }
 
